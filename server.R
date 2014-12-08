@@ -22,17 +22,56 @@ shinyServer(function(input, output) {
   
   output$table <- renderTable({ 
     res <- allRes[[input$Covariate]][[input$Pairwise]]
-    res <- res[order(res$padj), ]
-    res <- subset(res, padj < input$pval & baseMean > input$minmeancount)
-    
-    res <- res[1:input$ntopgenes, ]
 
+    # Sort by p-value
+    res <- subset(res, !is.na(padj))
+    res <- droplevels(res)
+        
+    res <- subset(res, padj < input$pval & baseMean > input$minmeancount)
+    res <- droplevels(res)
+
+    res <- res[1:min(input$ntopgenes, nrow(res)), ]
     res <- as.data.frame(res)
+    
     res$Ensembl <- gsub("\\..*", "", rownames(res))
         
     res <- merge(res, ensembl2symbol, by.x="Ensembl", by.y="query", all.x=TRUE)
     
-    as.data.frame(res[, c("symbol", "Ensembl", "baseMean", "log2FoldChange", "pvalue", "padj")])
+    res <- res[order(res$padj), ]
+    
+    results$table <- as.data.frame(res)[, c("symbol", "Ensembl", "baseMean", "log2FoldChange", "pvalue", "padj")]
+    results$table
+    
+  }, digits=4, include.rownames=FALSE)
+  
+  # Store current results
+  results <- reactiveValues() 
+  
+  #prepare data for download
+  output$downloadtable <- downloadHandler(
+    filename = function() {
+      paste('results.csv')
+    },
+    content  = function(file){
+      write.csv(results$table, file=file, row.names=F, col.names=T)      
+    })
+  
+  output$topgene_linkOut <- reactive({
+    prefix <- '<form action="https://toppgene.cchmc.org/CheckInput.action" method="post" target="_blank" display="inline">\
+    <input type="hidden" name="query" value="TOPPFUN">\
+    <input type="hidden" id="type" name="type" value="HGNC">\
+    <input type="hidden" name="training_set" id="training_set" value="%s">\
+    <input type="Submit" class="btn shiny-download-link" value="Enrichment Analysis in ToppGene">\
+    </form>'
+
+    
+    geneIds <- unique(results$table$symbol)
+    geneIds  <- geneIds[geneIds != ""]
+    geneIds <- paste(geneIds, collapse=" ")
+    
+    #generate the HTML content
+    htmlContent <- sprintf(prefix, geneIds)
+    htmlContent
   })
   
   

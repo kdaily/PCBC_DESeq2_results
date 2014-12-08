@@ -20,17 +20,19 @@ shinyUI(fluidPage(
       htmlOutput("selectPairwise"),
             
       sliderInput("pval", label=h3("Adjusted p-value threshold"),
-                  min=0, max=1, value=0.05, step=0.01, width=500),
+                  min=0, max=0.25, value=0.01, step=0.01, width=500),
 
       sliderInput("minmeancount", label=h3("Minimum mean count"),
-                  min=0, max=500, value=5, step=5, width=500),
+                  min=0, max=500, value=0, step=5, width=500),
       
       sliderInput("ntopgenes", label = h3("# of top genes"),
-                  min = 10, max = 500, value = 50, step=10, width=500)
+                  min = 0, max = 5000, value = 100, step=20, width=500)
     ),
     
     # Show a plot of the generated distribution
     mainPanel(
+      downloadButton('downloadtable','Download table'),
+      htmlOutput("topgene_linkOut"),
       tableOutput("table")
     )
   )
